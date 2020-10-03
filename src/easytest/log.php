@@ -46,6 +46,12 @@ final class BasicLog implements Log {
     }
 
 
+    /** @return int */
+    public function risk_count() {
+        return $this->count[namespace\EVENT_RISK];
+    }
+
+
     public function seconds_elapsed() {
         return $this->seconds_elapsed;
     }
@@ -71,6 +77,7 @@ final class BasicLogger implements Logger {
         namespace\EVENT_FAIL   => 0,
         namespace\EVENT_SKIP   => 0,
         namespace\EVENT_OUTPUT => 0,
+        namespace\EVENT_RISK   => 0,
     );
     private $events = array();
     private $verbose;
@@ -119,6 +126,17 @@ final class BasicLogger implements Logger {
             $this->events[] = array(namespace\EVENT_OUTPUT, $source, $reason);
         }
     }
+
+
+    /**
+     * @param string $source
+     * @return void
+     */
+    public function log_risk($source) {
+        ++$this->count[namespace\EVENT_RISK];
+        $this->events[] = array(namespace\EVENT_RISK, $source, 'This test makes no assertions.');
+    }
+
 
 
     public function get_log() {

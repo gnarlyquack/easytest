@@ -17,6 +17,7 @@ function test_one(easytest\Context $context) {
 
 function test_two() {
     test::$test = __FUNCTION__;
+    easytest\assert_true(true);
 }
 
 
@@ -37,5 +38,6 @@ class test {
 
     public function test_two() {
         self::$test = __FUNCTION__;
+        easytest\assert_true(true);
     }
 }

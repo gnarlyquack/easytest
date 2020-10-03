@@ -45,6 +45,12 @@ final class LiveUpdatingLogger implements Logger {
     }
 
 
+    public function log_risk($source) {
+        namespace\output_risk();
+        $this->logger->log_risk($source);
+    }
+
+
     private $logger;
 }
 
@@ -85,12 +91,19 @@ function output_output() {
 }
 
 
+/** @return void */
+function output_risk() {
+    echo 'R';
+}
+
+
 function output_log(Log $log) {
     $event_types = array(
         namespace\EVENT_FAIL => 'FAILED',
         namespace\EVENT_ERROR => 'ERROR',
         namespace\EVENT_SKIP => 'SKIPPED',
         namespace\EVENT_OUTPUT => 'OUTPUT',
+        namespace\EVENT_RISK => 'RISKY',
     );
 
     $output_count = 0;
@@ -115,6 +128,7 @@ function output_log(Log $log) {
     $errors = $log->error_count();
     $skipped = $log->skip_count();
     $output = $log->output_count();
+    $risks = $log->risk_count();
     $omitted = array();
     if ($output_count !== $output) {
         $omitted[] = 'output';
@@ -141,6 +155,9 @@ function output_log(Log $log) {
     }
     if ($skipped) {
         $summary[] = \sprintf('Skipped: %d', $skipped);
+    }
+    if ($risks) {
+        $summary[] = \sprintf('Risky: %d', $risks);
     }
     if ($output) {
         $summary[] = \sprintf('Output: %d', $output);

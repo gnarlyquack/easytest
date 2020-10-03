@@ -11,6 +11,7 @@ namespace easytest;
 const RESULT_PASS     = 0x0;
 const RESULT_FAIL     = 0x1;
 const RESULT_POSTPONE = 0x2;
+const RESULT_RISK     = 0x4;
 
 
 final class Context {
@@ -22,6 +23,9 @@ final class Context {
     private $result = namespace\RESULT_PASS;
     private $teardowns = array();
 
+    /** @var bool */
+    static public $asserted = false;
+
     public function __construct(State $state, Logger $logger,
         FunctionTest $test, $run
     ) {
@@ -29,6 +33,7 @@ final class Context {
         $this->logger = $logger;
         $this->test = $test;
         $this->run = $run;
+        self::$asserted = false;
     }
 
 
@@ -249,7 +254,12 @@ final class Context {
 
 
     public function result() {
-        return $this->result;
+        if (self::$asserted || namespace\RESULT_PASS !== $this->result) {
+            return $this->result;
+        }
+        else {
+            return namespace\RESULT_RISK;
+        }
     }
 
 
@@ -797,6 +807,9 @@ function run_function_test(
     foreach($context->teardowns() as $teardown) {
         $test->result |= namespace\_run_teardown($logger, $test_name, $teardown);
     }
+    if (namespace\RESULT_RISK & $test->result) {
+        $logger->log_risk($test->name);
+    }
 }
 
 
@@ -819,13 +832,14 @@ function run_function_teardown(
     if (namespace\RESULT_POSTPONE === $test->result) {
         return;
     }
+
     if (!isset($state->results[$test->name])) {
         $state->results[$test->name] = array('' => true);
     }
+    $state->results[$test->name][$run] = true;
+
     if (namespace\RESULT_PASS === $test->result) {
         $logger->log_pass($test_name);
-        $state->results[$test->name][$run] = true;
-        $state->results[$test->name][''] = $state->results[$test->name][''];
     }
     elseif (namespace\RESULT_FAIL & $test->result) {
         $state->results[$test->name][$run] = false;

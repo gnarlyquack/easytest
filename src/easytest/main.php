@@ -26,6 +26,7 @@ const EVENT_FAIL   = 2;
 const EVENT_ERROR  = 3;
 const EVENT_SKIP   = 4;
 const EVENT_OUTPUT = 5;
+const EVENT_RISK   = 6;
 
 const LOG_QUIET  = 0x0;
 const LOG_PASS   = 0x01;
@@ -49,6 +50,9 @@ interface Log {
 
     public function output_count();
 
+    /** @return int */
+    public function risk_count();
+
     public function seconds_elapsed();
 
     public function memory_used();
@@ -66,6 +70,12 @@ interface Logger {
     public function log_skip($source, $reason, $during_error = false);
 
     public function log_output($source, $reason, $during_error = false);
+
+    /**
+     * @param string $source
+     * @return void
+     */
+    public function log_risk($source);
 }
 
 

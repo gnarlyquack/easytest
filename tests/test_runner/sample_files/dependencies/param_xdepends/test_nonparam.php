@@ -5,6 +5,7 @@ use easytest;
 
 function test_two(easytest\Context $context) {
     $context->depend_on('param_xdepend\\param\\test_two');
+    easytest\assert_true(true);
 }
 
 function test_three(easytest\Context $context) {
@@ -31,6 +32,7 @@ function test_five(easytest\Context $context) {
 
 function test_one(easytest\Context $context) {
     $context->set(6);
+    easytest\assert_true(true);
 }
 
 function test_six() {

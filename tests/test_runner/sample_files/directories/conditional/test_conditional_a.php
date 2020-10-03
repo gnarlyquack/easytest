@@ -5,7 +5,9 @@ namespace condition;
 if (true) {
 
     class TestA {
-        public function test() {}
+        public function test() {
+            \easytest\assert_true(true);
+        }
     }
 
 }

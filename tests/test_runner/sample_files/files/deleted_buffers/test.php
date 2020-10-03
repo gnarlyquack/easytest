@@ -27,6 +27,7 @@ function teardown_function() {
 function test() {
     echo __FUNCTION__;
     ob_end_clean();
+    easytest\assert_true(true);
 }
 
 
@@ -54,5 +55,6 @@ class test {
     public function test() {
         echo __METHOD__;
         ob_end_clean();
+        easytest\assert_true(true);
     }
 }

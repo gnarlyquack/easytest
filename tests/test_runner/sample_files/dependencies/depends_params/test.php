@@ -24,6 +24,7 @@ function test_two($arg, easytest\Context $context) {
 }
 
 function test_one($arg, easytest\Context $context) {
+    easytest\assert_true(true);
     $context->set($arg);
 }
 
@@ -49,6 +50,7 @@ class test {
     }
 
     public function test_one(easytest\Context $context) {
+        easytest\assert_true(true);
         $context->set($this->arg);
     }
 }

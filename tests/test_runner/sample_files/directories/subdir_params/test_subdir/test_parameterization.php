@@ -13,6 +13,7 @@ function setup_functions($one, $two) {
 
 function test_function($one, $two, $three) {
     echo "$one $two $three";
+    easytest\assert_true(true);
 }
 
 
@@ -28,5 +29,6 @@ class TestClass {
 
     function test() {
         echo "{$this->one} {$this->two}";
+        easytest\assert_true(true);
     }
 }

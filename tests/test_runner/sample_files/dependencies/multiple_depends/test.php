@@ -10,15 +10,21 @@ function test_one(easytest\Context $context) {
 
 function test_three(easytest\Context $context) {
     $context->depend_on('test::test_two', 'test_seven');
+    easytest\assert_true(true);
 }
 
 function test_five(easytest\Context $context) {
     $context->depend_on('test::test_six', 'test::test_nine');
+    easytest\assert_true(true);
 }
 
-function test_seven() {}
+function test_seven() {
+    easytest\assert_true(true);
+}
 
-function test_ten() {}
+function test_ten() {
+    easytest\assert_true(true);
+}
 
 
 
@@ -29,13 +35,16 @@ class test {
 
     public function test_two(easytest\Context $context) {
         $context->depend_on('::test_five', 'test_six');
+        easytest\assert_true(true);
     }
 
     public function test_four(easytest\Context $context) {
         $context->depend_on('test_eight', 'test_nine');
     }
 
-    public function test_six() {}
+    public function test_six() {
+        easytest\assert_true(true);
+    }
 
     public function test_eight() {
         easytest\fail('I fail');
@@ -43,5 +52,6 @@ class test {
 
     public function test_nine(easytest\Context $context) {
         $context->depend_on('::test_ten');
+        easytest\assert_true(true);
     }
 }

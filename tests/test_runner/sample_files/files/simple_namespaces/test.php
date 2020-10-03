@@ -3,7 +3,9 @@
 namespace ns02;
 
 class TestNamespaces {
-    public function test() {}
+    public function test() {
+        \easytest\assert_true(true);
+    }
 }
 
 /* ensure the namespace operator isn't confused for a namespace declaration */
@@ -16,5 +18,7 @@ namespace/* Yup, this is valid! */
          ns03;
 
 class TestNamespaces {
-    public function test() {}
+    public function test() {
+        \easytest\assert_true(true);
+    }
 }

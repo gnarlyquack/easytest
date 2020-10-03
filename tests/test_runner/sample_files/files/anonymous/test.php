@@ -10,13 +10,15 @@ function test_anonymous_class() {
 }
 
 function test_i_am_a_function_name() {
+    easytest\assert_true(true);
 }
 
 
 class test {
     public function test_anonymous_class() {
-        $this->test_i_am_a_method_name(new class {});
+        $class = new class {};
+        easytest\assert_true(\is_object($class));
     }
 
-    private function test_i_am_a_method_name($class) {}
+    private function test_i_am_a_method_name() {}
 }

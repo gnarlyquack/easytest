@@ -1,9 +1,12 @@
 <?php
 
 namespace constructor_output;
+use easytest;
 
 
-function test_one() {}
+function test_one() {
+    easytest\assert_true(true);
+}
 
 
 class test {
@@ -12,8 +15,12 @@ class test {
     }
 
 
-    public function test_method() {}
+    public function test_method() {
+        easytest\assert_true(true);
+    }
 }
 
 
-function test_two() {}
+function test_two() {
+    easytest\assert_true(true);
+}

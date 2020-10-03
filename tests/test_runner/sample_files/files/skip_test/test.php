@@ -48,8 +48,12 @@ class test {
         easytest\skip('Skip me');
     }
 
-    public function test_two() {}
+    public function test_two() {
+        easytest\assert_true(true);
+    }
 }
 
 
-function test_two() {}
+function test_two() {
+    easytest\assert_true(true);
+}

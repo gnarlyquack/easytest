@@ -1,6 +1,7 @@
 <?php
 
 namespace setup_object_error;
+use easytest;
 
 
 function setup_file() {
@@ -21,7 +22,9 @@ function teardown_function() {
 }
 
 
-function test_one() {}
+function test_one() {
+    easytest\assert_true(true);
+}
 
 
 
@@ -48,4 +51,6 @@ class test {
 }
 
 
-function test_two() {}
+function test_two() {
+    easytest\assert_true(true);
+}

@@ -25,9 +25,12 @@ function teardown_function() {
 function test_one(easytest\Context $context) {
     $context->teardown(function () { easytest\skip('Skip me'); });
     $context->teardown(function () { echo 'teardown 2'; });
+    easytest\assert_true(true);
 }
 
-function test_two() {}
+function test_two() {
+    easytest\assert_true(true);
+}
 
 
 class test {
@@ -50,8 +53,11 @@ class test {
     public function test_one(easytest\Context $context) {
         $context->teardown(function () { easytest\skip('Skip me'); });
         $context->teardown(function () { echo 'teardown 2'; });
+        easytest\assert_true(true);
     }
 
 
-    public function test_two() {}
+    public function test_two() {
+        easytest\assert_true(true);
+    }
 }

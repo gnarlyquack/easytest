@@ -13,6 +13,10 @@ function teardown_runs_for_file() {
 }
 
 
-function test_one($one, $two, $three, $four) {}
+function test_one($one, $two, $three, $four) {
+    easytest\assert_true(true);
+}
 
-function test_two($one, $two, $three, $four) {}
+function test_two($one, $two, $three, $four) {
+    easytest\assert_true(true);
+}

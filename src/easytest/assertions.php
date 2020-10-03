@@ -18,6 +18,7 @@ namespace easytest;
  * @throws Failure
  */
 function assert_different($expected, $actual, $description = null) {
+    Context::$asserted = true;
     if ($expected !== $actual) {
         return;
     }
@@ -39,6 +40,7 @@ function assert_different($expected, $actual, $description = null) {
  * @throws Failure
  */
 function assert_equal($expected, $actual, $description = null) {
+    Context::$asserted = true;
     if ($expected == $actual) {
         return;
     }
@@ -59,6 +61,7 @@ function assert_equal($expected, $actual, $description = null) {
  * @throws Failure
  */
 function assert_false($actual, $description = null) {
+    Context::$asserted = true;
     if ($actual === false) {
         return;
     }
@@ -79,6 +82,7 @@ function assert_false($actual, $description = null) {
  * @throws Failure
  */
 function assert_falsy($actual, $description = null) {
+    Context::$asserted = true;
     if (!$actual) {
         return;
     }
@@ -100,6 +104,7 @@ function assert_falsy($actual, $description = null) {
  * @throws Failure
  */
 function assert_greater($actual, $min, $description = null) {
+    Context::$asserted = true;
     if ($actual > $min) {
         return;
     }
@@ -121,6 +126,7 @@ function assert_greater($actual, $min, $description = null) {
  * @throws Failure
  */
 function assert_greater_or_equal($actual, $min, $description = null) {
+    Context::$asserted = true;
     if ($actual >= $min) {
         return;
     }
@@ -142,6 +148,7 @@ function assert_greater_or_equal($actual, $min, $description = null) {
  * @throws Failure
  */
 function assert_identical($expected, $actual, $description = null) {
+    Context::$asserted = true;
     if ($expected === $actual) {
         return;
     }
@@ -163,6 +170,7 @@ function assert_identical($expected, $actual, $description = null) {
  * @throws Failure
  */
 function assert_less($actual, $max, $description = null) {
+    Context::$asserted = true;
     if ($actual < $max) {
         return;
     }
@@ -184,6 +192,7 @@ function assert_less($actual, $max, $description = null) {
  * @throws Failure
  */
 function assert_less_or_equal($actual, $max, $description = null) {
+    Context::$asserted = true;
     if ($actual <= $max) {
         return;
     }
@@ -206,6 +215,7 @@ function assert_less_or_equal($actual, $max, $description = null) {
  * @throws Failure|\Exception
  */
 function assert_throws($expected, $callback, $description = null) {
+    Context::$asserted = true;
     try {
         $callback();
     }
@@ -240,6 +250,7 @@ function assert_throws($expected, $callback, $description = null) {
  * @throws Failure
  */
 function assert_true($actual, $description = null) {
+    Context::$asserted = true;
     if ($actual === true) {
         return;
     }
@@ -260,6 +271,7 @@ function assert_true($actual, $description = null) {
  * @throws Failure
  */
 function assert_truthy($actual, $description = null) {
+    Context::$asserted = true;
     if ($actual) {
         return;
     }
@@ -281,6 +293,7 @@ function assert_truthy($actual, $description = null) {
  * @throws Failure
  */
 function assert_unequal($expected, $actual, $description = null) {
+    Context::$asserted = true;
     if ($expected != $actual) {
         return;
     }

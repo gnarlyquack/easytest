@@ -63,10 +63,12 @@ class test {
 
     public function test_pass() {
         echo __FUNCTION__;
+        easytest\assert_true(true);
     }
 }
 
 
 function test_pass() {
     echo __FUNCTION__;
+    easytest\assert_true(true);
 }

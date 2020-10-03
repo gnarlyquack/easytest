@@ -72,6 +72,21 @@ final class BufferingLogger implements Logger {
             $this->logger->log_output($source, $output, $during_error);
         }
     }
+
+
+    /**
+     * @param string $source
+     * @return void
+     */
+    public function log_risk($source) {
+        if ($this->buffer) {
+            $this->queued[] = array(namespace\EVENT_RISK, $source, null);
+        }
+        else {
+            $this->logger->log_risk($source);
+        }
+    }
+
 }
 
 
@@ -143,6 +158,13 @@ function end_buffering(BufferingLogger $logger) {
             case namespace\EVENT_OUTPUT:
                 $logger->logger->log_output($source, $reason, $logger->error);
                 break;
+
+            case namespace\EVENT_RISK:
+                $logger->logger->log_risk($source);
+                break;
+
+            default:
+                throw new \Exception("Unexpected event type: $type");
         }
     }
 

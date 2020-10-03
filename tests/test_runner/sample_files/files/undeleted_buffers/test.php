@@ -27,6 +27,7 @@ function teardown_function() {
 
 function test() {
     ob_start();
+    easytest\assert_true(true);
 }
 
 
@@ -53,5 +54,6 @@ class test {
 
     public function test() {
         ob_start();
+        easytest\assert_true(true);
     }
 }

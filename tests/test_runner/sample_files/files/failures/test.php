@@ -37,6 +37,7 @@ function test_two(easytest\Context $context) {
 function test_three(easytest\Context $context) {
     $context->teardown(function() { echo 'teardown'; });
     @$foo['bar'];
+    easytest\assert_true(true);
 }
 
 function test_four(easytest\Context $context) {
@@ -72,9 +73,10 @@ class test {
         \trigger_error('An error happened');
     }
 
-    function test_three(easytest\Context $context) {
+    public function test_three(easytest\Context $context) {
         $context->teardown(function() { echo 'teardown'; });
         $foo = @$this->bar;
+        easytest\assert_true(true);
     }
 
     public function test_four(easytest\Context $context) {

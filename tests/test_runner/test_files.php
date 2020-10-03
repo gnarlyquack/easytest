@@ -822,3 +822,13 @@ function test_converts_arglist_to_array() {
 
     namespace\assert_run_file($file, $events);
 }
+
+
+function test_reports_risky_test() {
+    $file = namespace\filepath('test_reports_risky_test.php');
+    $events = array(
+        array(easytest\EVENT_RISK, 'risky_test\\test', 'This test makes no assertions.'),
+    );
+
+    namespace\assert_run_file($file, $events);
+}

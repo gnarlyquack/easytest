@@ -1,7 +1,6 @@
 <?php
 
 namespace dir_params;
-
 use easytest;
 
 
@@ -33,6 +32,7 @@ function teardown_file($one, $two) {
 
 function test_function($one, $two) {
     echo "$one $two";
+    easytest\assert_true(true);
 }
 
 
@@ -48,5 +48,6 @@ class TestClass {
 
     function test() {
         echo "{$this->one} {$this->two}";
+        easytest\assert_true(true);
     }
 }
