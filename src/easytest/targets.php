@@ -8,128 +8,62 @@
 namespace easytest;
 
 
-const _TARGET_CLASS    = '--class=';
-const _TARGET_FUNCTION = '--function=';
-const _TARGET_PATH     = '--path=';
-\define('easytest\\_TARGET_CLASS_LEN', \strlen(namespace\_TARGET_CLASS));
-\define('easytest\\_TARGET_FUNCTION_LEN', \strlen(namespace\_TARGET_FUNCTION));
-\define('easytest\\_TARGET_PATH_LEN', \strlen(namespace\_TARGET_PATH));
+//
+// Interface
+//
 
-
-interface Target {
+interface Target
+{
     public function name();
     public function subtargets();
 }
 
 
-final class _Target extends struct implements Target {
-    public $name;
-    public $subtargets = array();
 
-    public function __construct($name) {
-        $this->name = $name;
+/**
+ * @param string[] $args
+ * @param ?string $error
+ * @return array{string, Target[]}|array{null, null}
+ */
+function process_user_targets(array $args, &$error)
+{
+    if (!$args)
+    {
+        $cwd = \getcwd();
+        // @todo what to get if getcwd fails?
+        \assert($cwd !== false);
+        $args[] = $cwd;
     }
-
-    public function name() {
-        return $this->name;
-    }
-
-    public function subtargets() {
-        return $this->subtargets;
-    }
-}
-
-
-function process_user_targets(array $args, &$errors) {
-    if (!$args) {
-        $args[] = \getcwd();
-    }
-    $errors = array();
-
-    $root = $file = $subtarget_count = null;
+    $args = new _TargetArgs($args);
     $targets = array();
-    foreach ($args as $arg) {
-        if (0 === \substr_compare($arg, namespace\_TARGET_CLASS,
-                                  0, namespace\_TARGET_CLASS_LEN, true)
-        ) {
-            $class = \substr($arg, namespace\_TARGET_CLASS_LEN);
-            if (!\strlen($class)) {
-                $errors[] = "Test target '$arg' requires a class name";
-                continue;
-            }
-            if (!isset($file)) {
-                $errors[] = "Test target '$arg' must be specified for a file";
-                continue;
-            }
-            if ($subtarget_count) {
-                namespace\_process_class_target($targets[$file]->subtargets, $class, $errors);
-            }
-        }
-        elseif (0 === \substr_compare($arg, namespace\_TARGET_FUNCTION,
-                                      0, namespace\_TARGET_FUNCTION_LEN, true)
-        ) {
-            $function = \substr($arg, namespace\_TARGET_FUNCTION_LEN);
-            if (!\strlen($function)) {
-                $errors[] = "Test target '$arg' requires a function name";
-                continue;
-            }
-            if (!isset($file)) {
-                $errors[] = "Test target '$arg' must be specified for a file";
-                continue;
-            }
-            if ($subtarget_count) {
-                namespace\_process_function_target($targets[$file]->subtargets, $function, $errors);
-            }
-        }
-        else {
-            if ($subtarget_count > 0
-                && \count($targets[$file]->subtargets) === $subtarget_count
-            ) {
-                $targets[$file]->subtargets = array();
-            }
-            $file = $subtarget_count = null;
+    $root = $error = null;
+    namespace\_parse_targets($args, $targets, $root, $error);
 
-            $path = $arg;
-            if (0 === \substr_compare($path, namespace\_TARGET_PATH,
-                                      0, namespace\_TARGET_PATH_LEN, true)
-            ) {
-                $path = \substr($path, namespace\_TARGET_PATH_LEN);
-                if (!\strlen($path)) {
-                    $errors[] = "Test target '$arg' requires a directory or file name";
-                    continue;
-                }
-            }
-            list($file, $subtarget_count)
-                = namespace\_process_path_target($targets, $root, $path, $errors);
-        }
-    }
-    if ($subtarget_count > 0
-        && \count($targets[$file]->subtargets) === $subtarget_count
-    ) {
-        $targets[$file]->subtargets = array();
-    }
-
-    if ($errors) {
+    if ($error)
+    {
         return array(null, null);
     }
 
     $keys = \array_keys($targets);
     \sort($keys, \SORT_STRING);
     $key = \current($keys);
-    while ($key !== false) {
-        if (\is_dir($key)) {
+    while ($key !== false)
+    {
+        if (\is_dir($key))
+        {
             $keylen = \strlen($key);
             $next = \next($keys);
             while (
                 $next !== false
-                && 0 === \substr_compare($next, $key, 0, $keylen)
-            ) {
+                && 0 === \substr_compare($next, $key, 0, $keylen))
+            {
                 unset($targets[$next]);
                 $next = \next($keys);
             }
             $key = $next;
         }
-        else {
+        else
+        {
             $key = \next($keys);
         }
     }
@@ -137,134 +71,543 @@ function process_user_targets(array $args, &$errors) {
 }
 
 
-function _process_class_target(array &$targets, $target, array &$errors) {
-    $split = \strpos($target, '::');
-    if (false === $split) {
-        $classes = $target;
-        $methods = null;
-    }
-    else {
-        $classes = \substr($target, 0, $split);
-        $methods = \substr($target, $split + 2);
-        if (!\strlen($classes)) {
-            $errors[] = "Test target '--class=$target' requires a class name";
-            return;
-        }
-        if (!\strlen($methods)) {
-            $errors[] = "Test target '--class=$target' requires a method name";
-            return;
-        }
+//
+// Implementation
+//
+
+//
+// Test target specifiers are parsed per the following grammar:
+//
+// targets: (path-target)*
+//
+// path-target:
+//    dir-name
+//  | file-name (function-target|class-target)*
+//
+//
+//  function-target: '--function=' function-list
+//
+//  function-list: function-name (',' function-name)*
+//
+//  function-name: ns-name? ID
+//
+//
+//  class-target: '--class=' class-list
+//
+//  class-list: class-and-methods (';' class-and-methods)*
+//
+//  class-and-methods: class-name ('::' method-list)?
+//
+//  class-name: ns-name? ID
+//
+//
+//  method-list: method-name (',' method-name)
+//
+//  method-name: ID
+//
+//
+//  ns-name : ID '\' (ID '\')*
+//
+
+
+const _TARGET_CLASS    = '--class=';
+const _TARGET_FUNCTION = '--function=';
+const _TARGET_IDENTIFIER = '~
+    \\G                         # anchor to start of offset
+    [a-zA-Z_\\x80-\\xff]        # first character of identifier (no digits)
+    [a-zA-Z0-9_\\x80-\\xff]*    # additional identifier characters
+    ~x';
+const _TARGET_NAMESPACE = '~
+    \\G                             # anchor to start of offset
+    (?:                             # non-capturing subpattern
+        [a-zA-Z_\\x80-\\xff]        # first character of namespace (no digits)
+        [a-zA-Z0-9_\\x80-\\xff]*    # additional namespace characters
+        \\\\                        # namespace separator
+    )+                              # subpattern can occur multiple times
+    ~x';
+
+
+final class _Target extends struct implements Target
+{
+    public $name;
+    public $subtargets = array();
+
+    public function __construct($name)
+    {
+        $this->name = $name;
     }
 
-    $classes = \explode(',', $classes);
-    $max_index = \count($classes) - 1;
-    $subtarget_count = 0;
-    $class = null;
-    foreach ($classes as $index => $class) {
-        // functions and classes with identical names can coexist!
-        if (!\strlen($class)) {
-            $errors[] = "Test target '--class=$target' is missing one or more class names";
-            return;
-        }
-
-        $class = "class $class";
-        if (!isset($targets[$class])) {
-            $targets[$class] = new _Target($class);
-            $subtarget_count = -1;
-        }
-        elseif ($index < $max_index) {
-            $targets[$class]->subtargets = array();
-        }
-        else {
-            $subtarget_count = \count($targets[$class]->subtargets);
-        }
+    public function name()
+    {
+        return $this->name;
     }
 
-    if ($methods && $subtarget_count) {
-        $targets = &$targets[$class]->subtargets;
-        foreach (\explode(',', $methods) as $method) {
-            if (!\strlen($method)) {
-                $errors[] = "Test target '--class=$target' is missing one or more method names";
-                return;
-            }
-
-            if (!isset($targets[$method])) {
-                $targets[$method] = new _Target($method);
-            }
-        }
-    }
-    elseif ($subtarget_count > 0) {
-        $targets[$class]->subtargets = array();
+    public function subtargets()
+    {
+        return $this->subtargets;
     }
 }
 
 
-function _process_function_target(array &$targets, $functions, array &$errors) {
-    foreach (\explode(',', $functions) as $function) {
-        if (!\strlen($function)) {
-            $errors[] = "Test target '--function=$functions' is missing one or more function names";
-            return;
-        }
+final class _TargetArgs extends struct
+{
+    /**
+     * @param string[] $args
+     */
+    public function __construct(array $args)
+    {
+        \assert((bool)$args);
 
-        // functions and classes with identical names can coexist!
-        $function = "function $function";
-        if (!isset($targets[$function])) {
-            $targets[$function] = new _Target($function);
+        $this->args = $args;
+        $this->arg_count = \count($args);
+        $this->arg_pos = 0;
+
+        $this->arg = $this->args[$this->arg_pos];
+        $this->len = \strlen($this->arg);
+        $this->pos = 0;
+    }
+
+    /**
+     * @return bool
+     */
+    public function has_arg()
+    {
+        return $this->arg_pos < $this->arg_count;
+    }
+
+    /**
+     * @return string
+     */
+    public function eat_arg()
+    {
+        $arg = $this->args[$this->arg_pos++];
+
+        if ($this->arg_pos < $this->arg_count)
+        {
+            $this->arg = $this->args[$this->arg_pos];
+            $this->len = \strlen($this->arg);
         }
+        else
+        {
+            $this->arg = null;
+            $this->len = 0;
+        }
+        $this->pos = 0;
+
+        return $arg;
+    }
+
+    /**
+     * @return string
+     */
+    public function peek_arg()
+    {
+        \assert(isset($this->arg));
+        return $this->arg;
+    }
+
+    /**
+     * @return bool
+     */
+    public function has_char()
+    {
+        \assert(isset($this->arg));
+        return $this->pos < $this->len;
+    }
+
+    /**
+     * @param string $chars
+     * @return string
+     */
+    public function eat_chars($chars)
+    {
+        return $this->match_chars($chars, true);
+    }
+
+    /**
+     * @param string $chars
+     * @return string
+     */
+    public function peek_chars($chars)
+    {
+        return $this->match_chars($chars, false);
+    }
+
+    /**
+     * @param string $pattern
+     * @return string
+     */
+    public function eat_pattern($pattern)
+    {
+        \assert(isset($this->arg));
+        if ($this->pos >= $this->len)
+        {
+            $result = '';
+        }
+        elseif (\preg_match($pattern, $this->arg, $matches, 0, $this->pos))
+        {
+            $result = $matches[0];
+            $this->pos += \strlen($result);
+        }
+        else
+        {
+            $result = '';
+        }
+        return $result;
+    }
+
+
+    /**
+     * @param string $chars
+     * @param bool $advance
+     * @return string
+     */
+    private function match_chars($chars, $advance)
+    {
+        \assert(isset($this->arg));
+        $len = \strlen($chars);
+        if ($this->pos >= $this->len)
+        {
+            $result = '';
+        }
+        elseif (0 === \substr_compare($this->arg, $chars, $this->pos, $len))
+        {
+            if ($advance)
+            {
+                $this->pos += $len;
+            }
+            $result = $chars;
+        }
+        else
+        {
+            $result = '';
+        }
+        return $result;
+    }
+
+    /** @var string[] */
+    private $args;
+    /** @var int */
+    private $arg_count;
+    /** @var int */
+    private $arg_pos;
+
+    /** @var ?string */
+    private $arg;
+    /** @var int */
+    private $len;
+    /** @var int */
+    private $pos;
+}
+
+
+
+/**
+ * @param array<string, _Target> $targets
+ * @param ?string $root
+ * @param ?string $error
+ * @return void
+ */
+function _parse_targets(_TargetArgs $args, array &$targets, &$root, &$error)
+{
+    while ($args->has_arg() && !$error)
+    {
+        namespace\_parse_path_target($args, $targets, $root, $error);
     }
 }
 
 
-function _process_path_target(array &$targets, &$root, $path, array &$errors) {
+/**
+ * @param array<string, _Target> $targets
+ * @param ?string $root
+ * @param ?string $error
+ * @return void
+ */
+function _parse_path_target(_TargetArgs $args, array &$targets, &$root, &$error)
+{
+    $path = $args->eat_arg();
     $realpath = \realpath($path);
-    $file = null;
-    if (!$realpath) {
-        $errors[] = "Path '$path' does not exist";
-        return array(null, null);
+    if (!$realpath)
+    {
+        $error = \sprintf('Argument \'%s\' must be a valid file path', $path);
+        return;
     }
 
-    if (isset($targets[$realpath])) {
-        if (\is_dir($realpath)) {
-            return array(null, null);
-        }
-        return array($realpath, \count($targets[$realpath]->subtargets));
-    }
-
-    if (!isset($root)) {
-        $root = namespace\_determine_test_root($realpath);
-    }
-    elseif (0 !== \substr_compare($realpath, $root, 0, \strlen($root))) {
-        $errors[] = "Path '$path' is outside the test root directory '$root'";
-        return array(null, null);
-    }
-
-    if (\is_dir($realpath)) {
+    if (\is_dir($realpath))
+    {
         $realpath .= \DIRECTORY_SEPARATOR;
     }
-    else {
-        $file = $realpath;
+
+    // The test root directory is not itself a test directory, so it shouldn't
+    // have any arguments specified for it
+    if (!isset($root))
+    {
+        $root = namespace\_determine_test_root($realpath);
+        if ($root === $realpath)
+        {
+            return;
+        }
+    }
+    elseif ($root === $realpath)
+    {
+        return;
+    }
+    elseif (0 !== \substr_compare($realpath, $root, 0, \strlen($root)))
+    {
+        $error = \sprintf(
+            'File path \'%s\' is outside the test root directory \'%s\'',
+            $path, $root);
+        return;
     }
 
-    $targets[$realpath] = new _Target($realpath);
-    return array($file, -1);
+    if (isset($targets[$realpath]))
+    {
+        $target = $targets[$realpath];
+        $duplicates = !$target->subtargets;
+    }
+    else
+    {
+        // @todo ensure path is a valid test path
+        $target = new _Target($realpath);
+        $targets[$realpath] = $target;
+        $duplicates = false;
+    }
+
+    if (\is_file($realpath))
+    {
+        $no_subtargets = true;
+        while ($args->has_arg() && !$error)
+        {
+            $args->peek_arg();
+            if ($args->peek_chars(namespace\_TARGET_CLASS))
+            {
+                $no_subtargets = false;
+                namespace\_parse_class_target($args, $target->subtargets, $error);
+            }
+            elseif ($args->peek_chars(namespace\_TARGET_FUNCTION))
+            {
+                $no_subtargets = false;
+                namespace\_parse_function_target($args, $target->subtargets, $error);
+            }
+            else
+            {
+                break;
+            }
+        }
+        if ($duplicates || $no_subtargets)
+        {
+            $target->subtargets = array();
+        }
+    }
 }
 
 
-function _determine_test_root($path) {
+function _determine_test_root($path)
+{
     // The test root directory is the first directory above $path whose
     // case-insensitive name does not begin with 'test'. If $path is a
     // directory, this could be $path itself. This is done to ensure that
     // directory fixtures are properly discovered when testing individual
     // subpaths within a test suite; discovery will begin at the root directory
     // and descend towards the specified path.
-    if (!\is_dir($path)) {
+    if (\is_dir($path))
+    {
+        $path = \rtrim($path, \DIRECTORY_SEPARATOR);
+    }
+    else
+    {
         $path = \dirname($path);
     }
 
-    while (0 === \substr_compare(\basename($path), 'test', 0, 4, true)) {
+    while (0 === \substr_compare(\basename($path), 'test', 0, 4, true))
+    {
         $path = \dirname($path);
     }
     return $path . \DIRECTORY_SEPARATOR;
+}
+
+
+/**
+ * @param array<string, _Target> $targets
+ * @param ?string $error
+ * @return void
+ */
+function _parse_class_target(_TargetArgs $args, array &$targets, &$error)
+{
+    $args->eat_chars(namespace\_TARGET_CLASS);
+
+    do
+    {
+        namespace\_parse_class_and_methods($args, $targets, $error);
+        if ($error)
+        {
+            return;
+        }
+    } while ($args->eat_chars(';'));
+
+    if ($args->has_char())
+    {
+        $error = \sprintf(
+            'Class target \'%s\' has one or more invalid class or method names',
+            $args->peek_arg());
+        return;
+    }
+    $args->eat_arg();
+}
+
+
+/**
+ * @param array<string, _Target> $targets
+ * @param ?string $error
+ * @return void
+ */
+function _parse_class_and_methods(_TargetArgs $args, array &$targets, &$error)
+{
+    $class = namespace\_parse_class_name($args, $error);
+    if ($error)
+    {
+        return;
+    }
+
+    if (isset($targets[$class]))
+    {
+        $target = $targets[$class];
+        $process_methods = (bool)$target->subtargets;
+    }
+    else
+    {
+        $target = new _Target($class);
+        $targets[$class] = $target;
+        $process_methods = true;
+    }
+
+    if ($args->eat_chars('::'))
+    {
+        do
+        {
+            $method = namespace\_parse_method_name($args, $error);
+            if ($error)
+            {
+                return;
+            }
+            if ($process_methods && !isset($targets[$method]))
+            {
+                $target->subtargets[$method] = new _Target($method);
+            }
+        } while ($args->eat_chars(','));
+    }
+    else
+    {
+        $target->subtargets = array();
+    }
+}
+
+
+/**
+ * @param ?string $error
+ * @return ?string
+ */
+function _parse_class_name(_TargetArgs $args, &$error)
+{
+    $ns = $args->eat_pattern(namespace\_TARGET_NAMESPACE);
+    $class = $args->eat_pattern(namespace\_TARGET_IDENTIFIER);
+
+    if (!$class)
+    {
+        $error = \sprintf(
+            'Class target \'%s\' is missing one or more class names',
+            $args->peek_arg());
+        return null;
+    }
+
+    // @todo validate that class name is a valid test class
+    // functions and classes with identical names can coexist!
+    // @todo compress this into a common validation function
+    // discovery also does this to disambiguate class and function names
+    return "class {$ns}{$class}";
+}
+
+
+/**
+ * @param ?string $error
+ * @return ?string
+ */
+function _parse_method_name(_TargetArgs $args, &$error)
+{
+    $method = $args->eat_pattern(namespace\_TARGET_IDENTIFIER);
+
+    if (!$method)
+    {
+        $error = \sprintf(
+            'Class target \'%s\' is missing one or more method names',
+            $args->peek_arg());
+        return null;
+    }
+
+    // @todo validate that method name is a valid test method
+    // @todo pass the method name through a common validator/normalizer?
+    // Even though we don't need to normalize the method name (as compared to
+    // function and class names), we may still want to for consistency and for
+    // future-proofing against new requirements
+    return $method;
+}
+
+
+/**
+ * @param array<string, _Target> $targets
+ * @param ?string $error
+ * @return void
+ */
+function _parse_function_target(_TargetArgs $args, array &$targets, &$error)
+{
+    $args->eat_chars(namespace\_TARGET_FUNCTION);
+
+    do
+    {
+        $function = namespace\_parse_function_name($args, $error);
+        if ($error)
+        {
+            return;
+        }
+        if (!isset($targets[$function]))
+        {
+            $targets[$function] = new _Target($function);
+        }
+    } while ($args->eat_chars(','));
+
+    if ($args->has_char())
+    {
+        $error = \sprintf(
+            'Function target \'%s\' has one or more invalid function names',
+            $args->peek_arg());
+        return;
+    }
+    $args->eat_arg();
+}
+
+
+/**
+ * @param ?string $error
+ * @return ?string
+ */
+function _parse_function_name(_TargetArgs $args, &$error)
+{
+    $ns = $args->eat_pattern(namespace\_TARGET_NAMESPACE);
+    $function = $args->eat_pattern(namespace\_TARGET_IDENTIFIER);
+
+    if (!$function)
+    {
+        $error = \sprintf(
+            'Function target \'%s\' is missing one or more function names',
+            $args->peek_arg());
+        return null;
+    }
+
+    // @todo validate that function name is a valid test function
+    // functions and classes with identical names can coexist!
+    // @todo compress this into a separate function
+    // discovery also does this to disambiguate class and function names
+    return "function {$ns}{$function}";
 }
 
 

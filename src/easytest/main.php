@@ -138,13 +138,13 @@ function main($argc, $argv) {
     namespace\_load_easytest();
 
     list($options, $args) = namespace\_parse_arguments($argc, $argv);
-    list($root, $targets) = namespace\process_user_targets($args, $errors);
-    if ($errors) {
-        foreach ($errors as $error) {
-            \fwrite(\STDERR, "{$error}\n");
-        }
+    list($root, $targets) = namespace\process_user_targets($args, $error);
+    if ($error) {
+        \fwrite(\STDERR, "{$error}\n");
         exit(namespace\EXIT_FAILURE);
     }
+    \assert(isset($root));
+    \assert(isset($targets));
 
     $logger = new BasicLogger($options['verbose']);
     namespace\output_header(namespace\_get_version());
