@@ -190,6 +190,7 @@ function _parse_file(BufferingLogger $logger, $filepath, array $checks, array &$
     }
 
     $ns = '';
+    // @bc 7.4 Use token_get_all instead of PhpToken object interface(?)
     $tokens = \token_get_all($source);
     $exists = array(
         \T_CLASS => 'class_exists',
@@ -240,7 +241,7 @@ function _parse_file(BufferingLogger $logger, $filepath, array $checks, array &$
             }
         }
         elseif (\T_NAMESPACE === $token_type) {
-            list($ns, $i) = namespace\_parse_namespace($tokens, $i, $ns);
+            $ns = namespace\_parse_namespace($tokens, $i, $ns);
         }
         elseif (\T_USE === $token_type) {
             // don't discover 'use function <function name>', etc.
@@ -368,7 +369,13 @@ function _consume_statement(array $tokens, $i) {
 }
 
 
-function _parse_namespace($tokens, $i, $current_ns) {
+/**
+ * @param mixed[] $tokens
+ * @param int $i
+ * @param string $current_ns
+ * @return string
+ */
+function _parse_namespace(array $tokens, &$i, $current_ns) {
     // There are two options:
     //
     // 1) This is a namespace declaration, which takes two forms:
@@ -383,29 +390,45 @@ function _parse_namespace($tokens, $i, $current_ns) {
     // token found after the 'namespace' keyword, this isn't a namespace
     // declaration. Otherwise, everything until the terminating ';' or '{'
     // constitutes the identifier.
-    $ns = array();
-    while (++$i) {
-        if ($tokens[$i] === ';' || $tokens[$i] === '{') {
-            return array($ns ? (\implode('', $ns) . '\\') : '', $i);
+    $ns = '';
+    for ($c = \count($tokens); $i < $c; ++$i) {
+        if (';' === $tokens[$i] || '{' === $tokens[$i]) {
+            break;
         }
 
         if (!\is_array($tokens[$i])) {
             continue;
         }
 
-        switch ($tokens[$i][0]) {
-        case \T_NS_SEPARATOR:
+        // @bc 7.4 Attempt to parse namespace name
+        // PHP >= 8 tokenizes the entire namespace name as one token, meaning
+        // we either have a namespace name or we don't. More specifically, the
+        // logic simplifies to:
+        // - T_NAME_QUALIFIED contains the namespace name and we're done
+        //   (although we keep parsing to the terminating ';' or '{')
+        // - T_NS_SEPARATOR indicates usage of the namespace operator and we
+        //   just want to return the current namespace
+        $code = $tokens[$i][0];
+        if (\T_NAME_QUALIFIED === $code) {
+            \assert(0 === \strlen($ns));
+            $ns = $tokens[$i][1];
+        }
+        elseif (\T_NS_SEPARATOR === $code) {
             if (!$ns) {
-                return array($current_ns, $i);
+                $ns = $current_ns;
+                break;
             }
-            $ns[] = $tokens[$i][1];
-            break;
-
-        case \T_STRING:
-            $ns[] = $tokens[$i][1];
-            break;
+            $ns .= $tokens[$i][1];
+        }
+        elseif (\T_STRING === $code) {
+            $ns .= $tokens[$i][1];
         }
     }
+
+    if (\strlen($ns)) {
+        $ns .= '\\';
+    }
+    return $ns;
 }
 
 
