@@ -400,28 +400,33 @@ function _parse_namespace(array $tokens, &$i, $current_ns) {
             continue;
         }
 
-        // @bc 7.4 Attempt to parse namespace name
-        // PHP >= 8 tokenizes the entire namespace name as one token, meaning
-        // we either have a namespace name or we don't. More specifically, the
-        // logic simplifies to:
-        // - T_NAME_QUALIFIED contains the namespace name and we're done
-        //   (although we keep parsing to the terminating ';' or '{')
-        // - T_NS_SEPARATOR indicates usage of the namespace operator and we
-        //   just want to return the current namespace
+        // @bc 7.4 Build namespace name from its individual tokens
+        // PHP >= 8 tokenizes the entire namespace name as one token
         $code = $tokens[$i][0];
-        if (\T_NAME_QUALIFIED === $code) {
-            \assert(0 === \strlen($ns));
-            $ns = $tokens[$i][1];
+        if (\version_compare(\PHP_VERSION, '8.0', '<')) {
+            if (\T_NS_SEPARATOR === $code) {
+                if (0 === \strlen($ns)) {
+                    $ns = $current_ns;
+                    break;
+                }
+                else {
+                    $ns .= $tokens[$i][1];
+                }
+            }
+            elseif (\T_STRING === $code) {
+                $ns .= $tokens[$i][1];
+            }
         }
-        elseif (\T_NS_SEPARATOR === $code) {
-            if (!$ns) {
+        else {
+            if (\T_NAME_QUALIFIED === $code || \T_STRING === $code) {
+                \assert(0 === \strlen($ns));
+                $ns = $tokens[$i][1];
+            }
+            elseif (\T_NS_SEPARATOR === $code) {
+                \assert(0 === \strlen($ns));
                 $ns = $current_ns;
                 break;
             }
-            $ns .= $tokens[$i][1];
-        }
-        elseif (\T_STRING === $code) {
-            $ns .= $tokens[$i][1];
         }
     }
 
